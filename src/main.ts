@@ -7,10 +7,7 @@ const copyButtonElement = document.getElementById(
 ) as HTMLButtonElement;
 const statusElement = document.getElementById("status") as HTMLSpanElement;
 
-const handlePaste = (e: ClipboardEvent) => {
-  const htmlData = e.clipboardData?.getData("text/html");
-  if (!htmlData) return;
-  inputElement.innerHTML = htmlData;
+const parseHTML = (htmlData: string) => {
   const parser = new DOMParser();
   const htmlDoc = parser.parseFromString(htmlData, "text/html");
   const findAndReturnATag = (node: ChildNode): ChildNode[] => {
@@ -67,15 +64,27 @@ const handlePaste = (e: ClipboardEvent) => {
   }
 };
 
+const handleChange = () => {
+  parseHTML(inputElement.innerHTML);
+};
+
 if (inputElement) {
-  inputElement.addEventListener("paste", handlePaste);
+  inputElement.addEventListener("input", handleChange);
 }
 
 if (copyButtonElement) {
   copyButtonElement.addEventListener("click", () => {
     statusElement.innerText = "⏳";
+    const blob = [
+      new ClipboardItem({
+        "text/plain": new Blob([resultElement.textContent || ""], {
+          type: "text/plain",
+        }),
+        "text/html": new Blob([resultElement.innerHTML], { type: "text/html" }),
+      }),
+    ];
     navigator.clipboard
-      .writeText(resultElement.innerHTML)
+      .write(blob)
       .then(() => {
         if (statusElement) {
           statusElement.innerText = "✅";
@@ -84,12 +93,9 @@ if (copyButtonElement) {
           }, 2000);
         }
       })
-      .catch(() => {
+      .catch((err) => {
         if (statusElement) {
-          statusElement.innerText = "❌";
-          setTimeout(() => {
-            statusElement.innerText = "📋";
-          }, 2000);
+          statusElement.innerText = "❌ " + err.message;
         }
       });
   });
